@@ -1,11 +1,15 @@
-﻿@{
+﻿@model List<string>
+@{
     ViewData["Title"] = "ProcessUrl";
 }
 
 <h1>ProcessUrl</h1>
 <ul>
-    @foreach (var description in ViewBag.Descriptions)
+    @if (Model != null)
     {
-        <li>@Html.Raw(description)</li>
+        @foreach (var description in Model)
+        {
+            <li>@description</li>
+        }
     }
 </ul>

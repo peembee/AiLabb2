@@ -21,7 +21,7 @@ namespace AiLabb2.Controllers
         private string azureKey = string.Empty;
         private string azureEndpoint = string.Empty;
 
-
+        List<string> descriptions = new List<string>();
 
         public HomeController(ILogger<HomeController> logger, IConfiguration configuration)
         {
@@ -43,6 +43,10 @@ namespace AiLabb2.Controllers
 
         public async Task<IActionResult> ProcessUrl(string url)
         {
+
+
+
+
             // Authenticate Computer Vision client
             ApiKeyServiceClientCredentials credentials = new ApiKeyServiceClientCredentials(azureKey);
             cvClient = new ComputerVisionClient(credentials)
@@ -64,48 +68,126 @@ namespace AiLabb2.Controllers
             // Get image analysis
             if (string.IsNullOrWhiteSpace(url))
             {
-                ViewBag.TestValue = "Ingen fil vald";
+                descriptions.Add("Ingen fil vald");
             }
             else
             {
-                var base64Data = url.Substring(url.IndexOf(',') + 1);
-                var imageBytes = Convert.FromBase64String(base64Data);
-
-                using (var imageData = new MemoryStream(imageBytes))
+                if (url.StartsWith("data:image"))
                 {
-                    var analysis = await cvClient.AnalyzeImageInStreamAsync(imageData, features);
-
-                    var descriptions = new List<string>();
-
-                    // get image captions
-                    foreach (var caption in analysis.Description.Captions)
+                    ProcessOnlineUrl(url);
+                }
+                else
+                {
+                    try
                     {
-                        descriptions.Add($"Description: {caption.Text} (confidence: {caption.Confidence.ToString("P")})");
+                        if (!url.EndsWith(".jpg"))
+                        {
+                            url = url + ".jpg";
+                        }
+                        using (var imageData = System.IO.File.OpenRead(url))
+                        {
+                            var analysis = await cvClient.AnalyzeImageInStreamAsync(imageData, features);
+
+
+
+                            // get image captions
+                            foreach (var caption in analysis.Description.Captions)
+                            {
+                                descriptions.Add($"Description: {caption.Text} (confidence: {caption.Confidence.ToString("P")})");
+                            }
+
+                            ViewBag.Descriptions = descriptions;
+
+                            // Get image tags
+                            // ...
+
+                            // Get image categories
+                            // ...
+
+                            // Get brands in the image
+                            // ...
+
+                            // Get objects in the image
+                            // ...
+
+                            // Get moderation ratings
+                            // ...
+                        }
                     }
-
-                    ViewBag.Descriptions = descriptions;
-
-                    // Get image tags
-                    // ...
-
-                    // Get image categories
-                    // ...
-
-                    // Get brands in the image
-                    // ...
-
-                    // Get objects in the image
-                    // ...
-
-                    // Get moderation ratings
-                    // ...
+                    catch (Exception ex)
+                    {
+                        descriptions.Add("No match");
+                    }
                 }
             }
-            return View("Index");
+
+
+            return View("Index", descriptions);
+
         }
 
 
+        private async Task ProcessOnlineUrl(string url)
+        {
+            // Authenticate Computer Vision client
+            ApiKeyServiceClientCredentials credentials = new ApiKeyServiceClientCredentials(azureKey);
+            cvClient = new ComputerVisionClient(credentials)
+            {
+                Endpoint = azureEndpoint
+            };
 
+            // Specify features to be retrieved
+            List<VisualFeatureTypes?> features = new List<VisualFeatureTypes?>()
+            {
+                VisualFeatureTypes.Description,
+                VisualFeatureTypes.Tags,
+                VisualFeatureTypes.Categories,
+                VisualFeatureTypes.Brands,
+                VisualFeatureTypes.Objects,
+                VisualFeatureTypes.Adult
+            };
+
+            // Get image analysis           
+            try
+            {
+                using (var httpClient = new HttpClient())
+                {
+                    var imageBytes = await httpClient.GetByteArrayAsync(url);
+                    using (var imageData = new MemoryStream(imageBytes))
+                    {
+                        var analysis = await cvClient.AnalyzeImageInStreamAsync(imageData, features);
+
+                        foreach (var caption in analysis.Description.Captions)
+                        {
+                            descriptions.Add($"Description: {caption.Text} (confidence: {caption.Confidence.ToString("P")})");
+                        }
+                    }
+                }
+
+                ViewBag.Descriptions = descriptions;
+
+
+
+                // Get image tags
+                // ...
+
+                // Get image categories
+                // ...
+
+                // Get brands in the image
+                // ...
+
+                // Get objects in the image
+                // ...
+
+                // Get moderation ratings
+                // ...
+            }
+            catch (Exception ex)
+            {
+                descriptions.Add("No match in the online part");
+            }
+        }
 
 
 
