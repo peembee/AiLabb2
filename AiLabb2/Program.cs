@@ -6,6 +6,12 @@ namespace AiLabb2
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // Add configuration for Azure-keys from: appsettings.json
+            IConfiguration configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json")
+            .Build();
+
             // Add services to the container.
             builder.Services.AddControllersWithViews();
 
