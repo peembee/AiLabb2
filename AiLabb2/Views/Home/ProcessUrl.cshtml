@@ -1,4 +1,4 @@
-﻿@model List<string>
+﻿@model Dictionary<string, string>
 @{
     ViewData["Title"] = "ProcessUrl";
 }
@@ -9,7 +9,8 @@
     {
         @foreach (var description in Model)
         {
-            <li>@description</li>
+            <li>@description.Key</li>
+            <p>@description.Value</p>
         }
     }
 </ul>

@@ -3,10 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
-using static System.Net.Mime.MediaTypeNames;
 using System.Net;
 using Microsoft.Extensions.Configuration;
 using Microsoft.CodeAnalysis;
+using System.Reflection;
+using System.Xml;
+using System.Drawing;
+
 
 namespace AiLabb2.Controllers
 {
@@ -21,7 +24,7 @@ namespace AiLabb2.Controllers
         private string azureKey = string.Empty;
         private string azureEndpoint = string.Empty;
 
-        List<string> descriptions = new List<string>();
+        Dictionary<string, string> imageDictionary = new Dictionary<string, string>();
 
         public HomeController(ILogger<HomeController> logger, IConfiguration configuration)
         {
@@ -29,23 +32,41 @@ namespace AiLabb2.Controllers
             this.configuration = configuration;
             azureKey = this.configuration["azureKey"];
             azureEndpoint = this.configuration["azureEndpoint"];
+            
         }
 
-        public IActionResult Index()
+
+        public async Task<IActionResult> Index()
         {
+            await DisplayImages();
             return View();
         }
+
 
         public IActionResult Privacy()
         {
             return View();
         }
 
+
+        public async Task<IActionResult> DisplayImages()
+        {
+            List<string> imagesList = new List<string>();
+
+            string getImageMap = "wwwroot/Images";
+            var imageFiles = Directory.GetFiles(getImageMap);
+
+            foreach (var imageName in imageFiles)
+            {
+                imagesList.Add(Path.GetFileName(imageName));
+            }       
+            return View("DisplayImages", imagesList);
+        }
+
+
         public async Task<IActionResult> ProcessUrl(string url)
         {
-
-
-
+            bool imageFound = false;
 
             // Authenticate Computer Vision client
             ApiKeyServiceClientCredentials credentials = new ApiKeyServiceClientCredentials(azureKey);
@@ -68,62 +89,144 @@ namespace AiLabb2.Controllers
             // Get image analysis
             if (string.IsNullOrWhiteSpace(url))
             {
-                descriptions.Add("Ingen fil vald");
+
+                ViewBag.Url = "Ingen fil vald";
+                await DisplayImages();
             }
             else
             {
                 if (url.StartsWith("data:image"))
                 {
-                    ProcessOnlineUrl(url);
+                    await ProcessOnlineUrl(url);
                 }
                 else
-                {
+                {                    
                     try
                     {
-                        if (!url.EndsWith(".jpg"))
-                        {
-                            url = url + ".jpg";
-                        }
+                        url = "wwwroot/Images/" + url;
                         using (var imageData = System.IO.File.OpenRead(url))
                         {
                             var analysis = await cvClient.AnalyzeImageInStreamAsync(imageData, features);
 
-
-
                             // get image captions
+                            string DescriptionKey = "Description";
+                            string DescriptionValue = "";                           
                             foreach (var caption in analysis.Description.Captions)
                             {
-                                descriptions.Add($"Description: {caption.Text} (confidence: {caption.Confidence.ToString("P")})");
+                                DescriptionValue += $"Description: {caption.Text} (confidence: {caption.Confidence.ToString("P")})";
+                                //imageDictionary.Add("Description", $"Description: {caption.Text} (confidence: {caption.Confidence.ToString("P")})");
+                                //descriptions.Add($"Description: {caption.Text} (confidence: {caption.Confidence.ToString("P")})");
                             }
+                            imageDictionary.Add(DescriptionKey, DescriptionValue);
 
-                            ViewBag.Descriptions = descriptions;
 
                             // Get image tags
-                            // ...
+                            string TagsKey = "Tags";
+                            string TagsValue = "";
+                            if (analysis.Tags.Count > 0)
+                            {                                
+                                //descriptions.Add("\nTags:");
+                                foreach (var tag in analysis.Tags)
+                                {
+                                    TagsValue += $"{tag.Name} (confidence: {tag.Confidence.ToString("P")})";
+                                    
+                                    //imageDictionary.Add($"Tags", ($" -{tag.Name} (confidence: {tag.Confidence.ToString("P")})"));
+                                    //descriptions.Add($" -{tag.Name} (confidence: {tag.Confidence.ToString("P")})");
+                                }                                
+                            }
+                            else
+                            {
+                                TagsValue += "Found no tags..";
+                            }
+                            imageDictionary.Add(TagsKey, TagsValue);
+
 
                             // Get image categories
-                            // ...
+                            string categoriesKey = "Categories";
+                            string categoriesValue = "";
+                            foreach (var category in analysis.Categories)
+                            {
+                                categoriesValue += $"{category.Name} (confidence: {category.Score.ToString("P")})";
+                            }                          
+                            imageDictionary.Add(categoriesKey, categoriesValue);
+
 
                             // Get brands in the image
-                            // ...
+                            string brandsKey = "Brands";
+                            string brandsValue = "";
+                            if (analysis.Brands.Count > 0)
+                            {
+                                Console.WriteLine("Brands:");
+                                foreach (var brand in analysis.Brands)
+                                {
+                                    brandsValue +=$"{brand.Name} (confidence: {brand.Confidence.ToString("P")})";
+                                }
+                            }
+                            else
+                            {
+                                brandsValue += "Found no brands..";
+                            }
+                            imageDictionary.Add(brandsKey, brandsValue);
+
 
                             // Get objects in the image
-                            // ...
+                            string objectsKey = "Objects";
+                            string objectsValue = "";
+                            if (analysis.Objects.Count > 0)
+                            {
+
+                                // Prepare image for drawing
+                                Image image = Image.FromFile(url);
+                                Graphics graphics = Graphics.FromImage(image);
+                                Pen pen = new Pen(Color.Cyan, 3);
+                                Font font = new Font("Arial", 16);
+                                SolidBrush brush = new SolidBrush(Color.Black);
+
+                                foreach (var detectedObject in analysis.Objects)
+                                {
+                                    // Print object name
+                                    objectsValue += $"{detectedObject.ObjectProperty} (confidence: {detectedObject.Confidence.ToString("P")})";
+
+                                    // Draw object bounding box
+                                    var r = detectedObject.Rectangle;
+                                    Rectangle rect = new Rectangle(r.X, r.Y, r.W, r.H);
+                                    graphics.DrawRectangle(pen, rect);
+                                    graphics.DrawString(detectedObject.ObjectProperty, font, brush, r.X, r.Y);
+
+                                }                                
+                            }
+                            else
+                            {
+                                objectsValue += "Found no objects..";
+                            }
+                            imageDictionary.Add(objectsKey, objectsValue);
+
 
                             // Get moderation ratings
-                            // ...
+                            string moderationKey = "Moderation";
+                            string moderationValue = "";
+                            moderationValue += $"Ratings: Adult: {analysis.Adult.IsAdultContent} Racy: {analysis.Adult.IsRacyContent} Gore: {analysis.Adult.IsGoryContent}";                          
+                            imageDictionary.Add(moderationKey, moderationValue);
                         }
+                        imageFound = true;
                     }
                     catch (Exception ex)
                     {
-                        descriptions.Add("No match");
+
+                        ViewBag.Url = "No match: " + url;
+                        await DisplayImages();
                     }
                 }
             }
 
-
-            return View("Index", descriptions);
-
+            if (imageFound)
+            {
+                return View(imageDictionary);
+            }
+            else
+            {
+                return View("index");
+            }
         }
 
 
@@ -159,14 +262,10 @@ namespace AiLabb2.Controllers
 
                         foreach (var caption in analysis.Description.Captions)
                         {
-                            descriptions.Add($"Description: {caption.Text} (confidence: {caption.Confidence.ToString("P")})");
+                            //descriptions.Add($"Description: {caption.Text} (confidence: {caption.Confidence.ToString("P")})");
                         }
                     }
                 }
-
-                ViewBag.Descriptions = descriptions;
-
-
 
                 // Get image tags
                 // ...
@@ -185,11 +284,10 @@ namespace AiLabb2.Controllers
             }
             catch (Exception ex)
             {
-                descriptions.Add("No match in the online part");
+                ViewBag.Url = "No match in the online part";
+                await DisplayImages();
             }
         }
-
-
 
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

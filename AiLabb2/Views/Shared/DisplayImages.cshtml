@@ -1,0 +1,17 @@
+﻿@model List<string>
+
+<h1>visa alla böcker</h1>
+<div>
+    @if (Model != null)
+    {
+        @foreach (var image in Model)
+        {
+            <div>
+                <p>@image</p>
+                <a asp-action="ProcessUrl" asp-route-url="@image">
+                    <img src="/Images/@image" class="images" />
+                </a>
+            </div>
+        }
+    }
+</div>

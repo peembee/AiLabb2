@@ -20,3 +20,8 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+.images {
+    border: 5px solid red;
+    height: 500px;
+}

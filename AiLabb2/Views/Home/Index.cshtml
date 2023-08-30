@@ -1,4 +1,5 @@
-﻿@{
+﻿@model List<string>
+@{
     ViewData["Title"] = "Home Page";
 }
 
@@ -14,12 +15,15 @@
     </div>
 </form>
 
+@*if no images found, it will be displayed in the index-home page*@
+<h3>@ViewBag.Url</h3>
 
 <h2>slutet på index</h2>
 <p>----------------------------------------------------------------------------</p>
 
-<div class="partialbox">
+
+<div>
     @{
-        await Html.RenderPartialAsync("ProcessUrl");
+        await Html.RenderPartialAsync("DisplayImages");
     }
 </div>
