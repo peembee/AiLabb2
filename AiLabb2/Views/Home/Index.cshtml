@@ -4,8 +4,8 @@
 }
 
 <div class="text-center">
-    <h1 class="display-4">Enter an Image-URL</h1>
-    <p>When you enter an url you will get AI-information about that image</p>
+    <h1 class="display-4 indexTitel">Enter an Image-URL</h1>
+    <p class="indexText">When you enter an url you will get AI-information about that image</p>
 </div>
 <form asp-action="ProcessUrl">
     <div>
@@ -16,10 +16,7 @@
 </form>
 
 @*if no images found, it will be displayed in the index-home page*@
-<h3>@ViewBag.Url</h3>
-
-<h2>slutet på index</h2>
-<p>----------------------------------------------------------------------------</p>
+<h3 class="missingUrl" id="rollingText">@ViewBag.Url</h3>
 
 
 <div>

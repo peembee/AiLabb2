@@ -32,7 +32,7 @@ namespace AiLabb2.Controllers
             this.configuration = configuration;
             azureKey = this.configuration["azureKey"];
             azureEndpoint = this.configuration["azureEndpoint"];
-            
+
         }
 
 
@@ -42,13 +42,7 @@ namespace AiLabb2.Controllers
             return View();
         }
 
-
-        public IActionResult Privacy()
-        {
-            return View();
-        }
-
-
+        //display all image in Index-Page (partialView)
         public async Task<IActionResult> DisplayImages()
         {
             List<string> imagesList = new List<string>();
@@ -59,15 +53,16 @@ namespace AiLabb2.Controllers
             foreach (var imageName in imageFiles)
             {
                 imagesList.Add(Path.GetFileName(imageName));
-            }       
+            }
             return View("DisplayImages", imagesList);
         }
 
 
+        //checking the url
         public async Task<IActionResult> ProcessUrl(string url)
         {
             bool imageFound = false;
-
+            string sendUrlLinkToProcessUrlView = url;
             // Authenticate Computer Vision client
             ApiKeyServiceClientCredentials credentials = new ApiKeyServiceClientCredentials(azureKey);
             cvClient = new ComputerVisionClient(credentials)
@@ -90,17 +85,18 @@ namespace AiLabb2.Controllers
             if (string.IsNullOrWhiteSpace(url))
             {
 
-                ViewBag.Url = "Ingen fil vald";
+                ViewBag.Url = "Missing Text";
                 await DisplayImages();
             }
             else
             {
+                // If url matches an Online-image, send it to that function
                 if (url.StartsWith("data:image"))
                 {
                     await ProcessOnlineUrl(url);
                 }
                 else
-                {                    
+                {
                     try
                     {
                         url = "wwwroot/Images/" + url;
@@ -110,12 +106,10 @@ namespace AiLabb2.Controllers
 
                             // get image captions
                             string DescriptionKey = "Description";
-                            string DescriptionValue = "";                           
+                            string DescriptionValue = "";
                             foreach (var caption in analysis.Description.Captions)
                             {
                                 DescriptionValue += $"Description: {caption.Text} (confidence: {caption.Confidence.ToString("P")})";
-                                //imageDictionary.Add("Description", $"Description: {caption.Text} (confidence: {caption.Confidence.ToString("P")})");
-                                //descriptions.Add($"Description: {caption.Text} (confidence: {caption.Confidence.ToString("P")})");
                             }
                             imageDictionary.Add(DescriptionKey, DescriptionValue);
 
@@ -124,15 +118,11 @@ namespace AiLabb2.Controllers
                             string TagsKey = "Tags";
                             string TagsValue = "";
                             if (analysis.Tags.Count > 0)
-                            {                                
-                                //descriptions.Add("\nTags:");
+                            {
                                 foreach (var tag in analysis.Tags)
                                 {
                                     TagsValue += $"{tag.Name} (confidence: {tag.Confidence.ToString("P")})";
-                                    
-                                    //imageDictionary.Add($"Tags", ($" -{tag.Name} (confidence: {tag.Confidence.ToString("P")})"));
-                                    //descriptions.Add($" -{tag.Name} (confidence: {tag.Confidence.ToString("P")})");
-                                }                                
+                                }
                             }
                             else
                             {
@@ -147,7 +137,7 @@ namespace AiLabb2.Controllers
                             foreach (var category in analysis.Categories)
                             {
                                 categoriesValue += $"{category.Name} (confidence: {category.Score.ToString("P")})";
-                            }                          
+                            }
                             imageDictionary.Add(categoriesKey, categoriesValue);
 
 
@@ -159,7 +149,7 @@ namespace AiLabb2.Controllers
                                 Console.WriteLine("Brands:");
                                 foreach (var brand in analysis.Brands)
                                 {
-                                    brandsValue +=$"{brand.Name} (confidence: {brand.Confidence.ToString("P")})";
+                                    brandsValue += $"{brand.Name} (confidence: {brand.Confidence.ToString("P")})";
                                 }
                             }
                             else
@@ -192,8 +182,7 @@ namespace AiLabb2.Controllers
                                     Rectangle rect = new Rectangle(r.X, r.Y, r.W, r.H);
                                     graphics.DrawRectangle(pen, rect);
                                     graphics.DrawString(detectedObject.ObjectProperty, font, brush, r.X, r.Y);
-
-                                }                                
+                                }
                             }
                             else
                             {
@@ -205,15 +194,15 @@ namespace AiLabb2.Controllers
                             // Get moderation ratings
                             string moderationKey = "Moderation";
                             string moderationValue = "";
-                            moderationValue += $"Ratings: Adult: {analysis.Adult.IsAdultContent} Racy: {analysis.Adult.IsRacyContent} Gore: {analysis.Adult.IsGoryContent}";                          
+                            moderationValue += $"Ratings: Adult: {analysis.Adult.IsAdultContent} Racy: {analysis.Adult.IsRacyContent} Gore: {analysis.Adult.IsGoryContent}";
                             imageDictionary.Add(moderationKey, moderationValue);
                         }
                         imageFound = true;
                     }
+                    // if no matches the image-url, let user know
                     catch (Exception ex)
                     {
-
-                        ViewBag.Url = "No match: " + url;
+                        ViewBag.Url = "No match";
                         await DisplayImages();
                     }
                 }
@@ -221,6 +210,8 @@ namespace AiLabb2.Controllers
 
             if (imageFound)
             {
+                ViewBag.SingleImage = sendUrlLinkToProcessUrlView;
+
                 return View(imageDictionary);
             }
             else
@@ -230,6 +221,7 @@ namespace AiLabb2.Controllers
         }
 
 
+        // if the image is from an online-image
         private async Task ProcessOnlineUrl(string url)
         {
             // Authenticate Computer Vision client
@@ -287,6 +279,51 @@ namespace AiLabb2.Controllers
                 ViewBag.Url = "No match in the online part";
                 await DisplayImages();
             }
+        }
+
+
+        [HttpPost]
+        public async Task<IActionResult> GetThumbnail(string url)
+        {
+            ApiKeyServiceClientCredentials credentials = new ApiKeyServiceClientCredentials(azureKey);
+            cvClient = new ComputerVisionClient(credentials)
+            {
+                Endpoint = azureEndpoint
+            };
+            url = "wwwroot/Images/" + url;
+            // Generate a thumbnail
+            try
+            {
+                ViewBag.CreatedThumbnail2 = "inne i try";
+
+                ViewBag.Url3 = url;
+
+                using (var imageData = System.IO.File.OpenRead(url))
+                {
+                    ViewBag.CreatedThumbnail3 = "inne i using";
+                    // Get thumbnail data
+                    if (imageData != null)
+                    {
+                        var thumbnailStream = await cvClient.GenerateThumbnailInStreamAsync(200, 200, imageData, true);
+                        // Save thumbnail image
+                        string thumbnailFileName = $"wwwroot/Thumbnails/thumbnail";
+                        using (Stream thumbnailFile = System.IO.File.Create(thumbnailFileName))
+                        {
+                            thumbnailStream.CopyTo(thumbnailFile);
+                        }
+                        ViewBag.CreatedThumbnail = $"Thumbnail saved in {thumbnailFileName}";
+                    }
+                    else
+                    {
+                        ViewBag.CreatedThumbnail4 = "imageData är null";
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                ViewBag.CreatedThumbnail = "No image found";
+            }
+            return View("GetThumbnail");
         }
 
 

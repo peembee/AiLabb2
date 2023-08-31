@@ -2,15 +2,22 @@
 @{
     ViewData["Title"] = "ProcessUrl";
 }
+<img src="~/Images/@ViewBag.SingleImage" class="viewSingleImage" />
+<h3>@ViewBag.SingleImage</h3>
+<form asp-action="getThumbnail">
+    <label></label>
+    <input type="hidden" name="url" value="@ViewBag.SingleImage" />
+    <button type="submit" class="btn btn-primary">Get Thumbnail</button>
+</form>
 
-<h1>ProcessUrl</h1>
-<ul>
+
+<ul class="cvContainer">
     @if (Model != null)
-    {
+    {        
         @foreach (var description in Model)
         {
-            <li>@description.Key</li>
-            <p>@description.Value</p>
+            <li class="cvTitel">@description.Key</li>
+            <p class="cvText">@description.Value</p>
         }
     }
 </ul>

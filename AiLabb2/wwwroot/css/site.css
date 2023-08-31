@@ -1,27 +1,132 @@
 html {
-  font-size: 14px;
+    font-size: 14px;    
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
+    html {
+        font-size: 16px;
+    }
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
 html {
-  position: relative;
-  min-height: 100%;
+    position: relative;
+    min-height: 100%;
 }
 
 body {
-  margin-bottom: 60px;
+    margin-bottom: 60px;
+    background: linear-gradient(109.6deg, rgb(0, 0, 0) 11.2%, rgb(11, 132, 145) 91.1%);
+}
+
+/*Navbar*/
+.navbarColor {
+    background: linear-gradient(to right, rgb(182, 244, 146), rgb(51, 139, 147));
+}
+
+.navBtn:hover{
+    opacity:0.5;
+}
+
+/*Index-page*/
+.indexTitel {
+    color: whitesmoke;
+    font-size: 40px;
+    opacity: 0.8;
+}
+.indexText {
+    color: whitesmoke;
+    font-size:20px;
+    opacity: 0.8;
+}
+
+.missingUrl {  
+    transition: 0.5s;
+    color: whitesmoke;
+    opacity: 0; /* Börja med transparent */
+    animation: scrollText 3s linear infinite;
+    animation-fill-mode: forwards; /* Stoppa på slutet av animationen */
+    white-space: nowrap; /* Hindra radbrytning */
+    overflow: hidden; /* Dölj text som inte syns */
+    display: inline-block; /* Anpassa storlek efter textinnehåll */
+    width: 25%; /* Anpassa till förälderelementets bredd */
+}
+
+@keyframes scrollText {
+    0% {
+        transform: translateX(0);
+        opacity: 0; /* Börja med transparent */
+    }
+
+    50% {
+        opacity: 0.7; /* När texten når mitten, gör den synlig */
+    }
+
+    100% {
+        transform: translateX(calc(100%)); /* Använd calc för att inkludera margin */
+        opacity: 0; /* Slutet, gör den återigen transparent */
+    }
+}
+
+
+
+/*Image-design*/
+.imageContainer {
+    margin-top: 80px;
+    display: flex;
+    flex-wrap: wrap; 
+    justify-content: space-between;
+}
+
+.imageCover {
+    transition: transform 0.3s;
+    box-shadow: 0px 0px 10px 1px white;
+    border-radius: 5px;
+    margin-bottom: 30px;
+    width: 402px;
+}
+.imageCover:hover {
+    transition: transform 0.3s;
+    transform: scale(1.5);
+}
+
+.imageTitel {
+    color: whitesmoke;
+    font-family: "Comic Sans MS", cursive, sans-serif;
+    margin-bottom: 0px;
+    margin-left: 5%;
+    transition: 2s;
 }
 
 .images {
-    border: 5px solid red;
-    height: 500px;
+    height: 250px;
+    width: 400px;
+}
+
+.viewSingleImage {
+    max-height: 40%;
+    max-width: 40%;
+    box-shadow: 0px 0px 10px 1px white;
+    border-radius: 5px;
+    transform: translateY(0%) translateX(80%);
+    margin-bottom: 30px;
+    margin-top: 30px;
+}
+
+/*Computer-vision text*/
+.cvContainer {
+    text-align:center
+}
+.cvTitel {
+    font-size: 20px;
+    color: whitesmoke;
+    opacity: 0.7;
+    list-style: none;
+}
+
+.cvText{
+    color:whitesmoke;
 }

@@ -1,13 +1,12 @@
 ﻿@model List<string>
 
-<h1>visa alla böcker</h1>
-<div>
+<div class="imageContainer">
     @if (Model != null)
     {
         @foreach (var image in Model)
         {
-            <div>
-                <p>@image</p>
+            <div class="imageCover">
+                <p class="imageTitel">@image</p>
                 <a asp-action="ProcessUrl" asp-route-url="@image">
                     <img src="/Images/@image" class="images" />
                 </a>
