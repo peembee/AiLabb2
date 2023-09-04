@@ -61,6 +61,7 @@ namespace AiLabb2.Controllers
         //checking the url
         public async Task<IActionResult> ProcessUrl(string url)
         {
+            imageDictionary.Clear();
             bool imageFound = false;
             string sendUrlLinkToProcessUrlView = url;
             // Authenticate Computer Vision client
@@ -82,6 +83,133 @@ namespace AiLabb2.Controllers
             };
 
             // Get image analysis
+            try
+            {
+                url = "wwwroot/Images/" + url;
+                using (var imageData = System.IO.File.OpenRead(url))
+                {
+                    var analysis = await cvClient.AnalyzeImageInStreamAsync(imageData, features);
+
+                    // get image captions
+                    string DescriptionKey = "Description";
+                    string DescriptionValue = "";
+                    foreach (var caption in analysis.Description.Captions)
+                    {
+                        DescriptionValue += $"Description: {caption.Text} - Confidence: {caption.Confidence.ToString("P")}<br />";
+                    }
+                    imageDictionary.Add(DescriptionKey, DescriptionValue);
+
+
+                    // Get image tags
+                    string TagsKey = "Tags";
+                    string TagsValue = "";
+                    if (analysis.Tags.Count > 0)
+                    {
+                        foreach (var tag in analysis.Tags)
+                        {
+                            TagsValue += $"{tag.Name} - Confidence: {tag.Confidence.ToString("P")}<br />";
+                        }
+                    }
+                    else
+                    {
+                        TagsValue += "Found no tags..";
+                    }
+                    imageDictionary.Add(TagsKey, TagsValue);
+
+
+                    // Get image categories
+                    string categoriesKey = "Categories";
+                    string categoriesValue = "";
+                    foreach (var category in analysis.Categories)
+                    {
+                        categoriesValue += $"{category.Name} - Confidence: {category.Score.ToString("P")}<br />";
+                    }
+                    imageDictionary.Add(categoriesKey, categoriesValue);
+
+
+                    // Get brands in the image
+                    string brandsKey = "Brands";
+                    string brandsValue = "";
+                    if (analysis.Brands.Count > 0)
+                    {
+                        Console.WriteLine("Brands:");
+                        foreach (var brand in analysis.Brands)
+                        {
+                            brandsValue += $"{brand.Name} - Confidence: {brand.Confidence.ToString("P")}<br />";
+                        }
+                    }
+                    else
+                    {
+                        brandsValue += "Found no brands..";
+                    }
+                    imageDictionary.Add(brandsKey, brandsValue);
+
+
+                    // Get objects in the image
+                    string objectsKey = "Objects";
+                    string objectsValue = "";
+                    if (analysis.Objects.Count > 0)
+                    {
+
+                        // Prepare image for drawing
+                        Image image = Image.FromFile(url);
+                        Graphics graphics = Graphics.FromImage(image);
+                        Pen pen = new Pen(Color.Cyan, 3);
+                        Font font = new Font("Arial", 16);
+                        SolidBrush brush = new SolidBrush(Color.Black);
+
+                        foreach (var detectedObject in analysis.Objects)
+                        {
+                            // Print object name
+                            objectsValue += $"{detectedObject.ObjectProperty} - Confidence: {detectedObject.Confidence.ToString("P")}<br />";
+
+                            // Draw object bounding box
+                            var r = detectedObject.Rectangle;
+                            Rectangle rect = new Rectangle(r.X, r.Y, r.W, r.H);
+                            graphics.DrawRectangle(pen, rect);
+                            graphics.DrawString(detectedObject.ObjectProperty, font, brush, r.X, r.Y);
+                        }
+                    }
+                    else
+                    {
+                        objectsValue += "Found no objects..";
+                    }
+                    imageDictionary.Add(objectsKey, objectsValue);
+
+
+                    // Get moderation ratings
+                    string moderationKey = "Moderation";
+                    string moderationValue = "";
+                    moderationValue += $"Ratings: Adult: {analysis.Adult.IsAdultContent} <br /> Racy: {analysis.Adult.IsRacyContent} <br /> Gore: {analysis.Adult.IsGoryContent}";
+                    imageDictionary.Add(moderationKey, moderationValue);
+                }
+                imageFound = true;
+            }
+            // if no matches the image-url, let user know
+            catch (Exception ex)
+            {
+                ViewBag.Url = "No match";
+                await DisplayImages();
+            }
+
+
+            if (imageFound)
+            {
+                ViewBag.SingleImage = sendUrlLinkToProcessUrlView;
+
+                return View(imageDictionary);
+            }
+            else
+            {
+                return View("index");
+            }
+        }
+
+
+        // if the image is an online-image-adress
+        public async Task<IActionResult> ProcessOnlineUrl(string url)
+        {
+            bool imageFound = false;
             if (string.IsNullOrWhiteSpace(url))
             {
 
@@ -90,26 +218,49 @@ namespace AiLabb2.Controllers
             }
             else
             {
-                // If url matches an Online-image, send it to that function
-                if (url.StartsWith("data:image"))
+                imageDictionary.Clear();                
+
+                // Authenticate Computer Vision client
+                ApiKeyServiceClientCredentials credentials = new ApiKeyServiceClientCredentials(azureKey);
+                cvClient = new ComputerVisionClient(credentials)
                 {
-                    await ProcessOnlineUrl(url);
-                }
-                else
+                    Endpoint = azureEndpoint
+                };
+
+                // Specify features to be retrieved
+                List<VisualFeatureTypes?> features = new List<VisualFeatureTypes?>()
+            {
+                VisualFeatureTypes.Description,
+                VisualFeatureTypes.Tags,
+                VisualFeatureTypes.Categories,
+                VisualFeatureTypes.Brands,
+                VisualFeatureTypes.Objects,
+                VisualFeatureTypes.Adult
+            };
+
+                // Get image analysis           
+                try
                 {
-                    try
+                    using (var httpClient = new HttpClient())
                     {
-                        url = "wwwroot/Images/" + url;
-                        using (var imageData = System.IO.File.OpenRead(url))
+                        string base64Data = url.Substring(url.IndexOf(',') + 1); // Antar att kommat (,) separerar metadata och Base64-data
+
+                        // Dekodera base64-data till en byte-array
+                        byte[] imageBytes = Convert.FromBase64String(base64Data);
+
+                        // Skapa en MemoryStream från byte-array
+                        using (var imageData = new MemoryStream(imageBytes))
                         {
+                            // Använd imageData för att analysera bilden med Computer Vision API
                             var analysis = await cvClient.AnalyzeImageInStreamAsync(imageData, features);
+
 
                             // get image captions
                             string DescriptionKey = "Description";
                             string DescriptionValue = "";
                             foreach (var caption in analysis.Description.Captions)
                             {
-                                DescriptionValue += $"Description: {caption.Text} (confidence: {caption.Confidence.ToString("P")})";
+                                DescriptionValue += $"Description: {caption.Text} - Confidence: {caption.Confidence.ToString("P")}<br />";
                             }
                             imageDictionary.Add(DescriptionKey, DescriptionValue);
 
@@ -121,7 +272,7 @@ namespace AiLabb2.Controllers
                             {
                                 foreach (var tag in analysis.Tags)
                                 {
-                                    TagsValue += $"{tag.Name} (confidence: {tag.Confidence.ToString("P")})";
+                                    TagsValue += $"{tag.Name} - Confidence: {tag.Confidence.ToString("P")}<br />";
                                 }
                             }
                             else
@@ -130,13 +281,12 @@ namespace AiLabb2.Controllers
                             }
                             imageDictionary.Add(TagsKey, TagsValue);
 
-
                             // Get image categories
                             string categoriesKey = "Categories";
                             string categoriesValue = "";
                             foreach (var category in analysis.Categories)
                             {
-                                categoriesValue += $"{category.Name} (confidence: {category.Score.ToString("P")})";
+                                categoriesValue += $"{category.Name} - Confidence: {category.Score.ToString("P")}<br />";
                             }
                             imageDictionary.Add(categoriesKey, categoriesValue);
 
@@ -149,7 +299,7 @@ namespace AiLabb2.Controllers
                                 Console.WriteLine("Brands:");
                                 foreach (var brand in analysis.Brands)
                                 {
-                                    brandsValue += $"{brand.Name} (confidence: {brand.Confidence.ToString("P")})";
+                                    brandsValue += $"{brand.Name} - Confidence: {brand.Confidence.ToString("P")}<br />";
                                 }
                             }
                             else
@@ -175,7 +325,7 @@ namespace AiLabb2.Controllers
                                 foreach (var detectedObject in analysis.Objects)
                                 {
                                     // Print object name
-                                    objectsValue += $"{detectedObject.ObjectProperty} (confidence: {detectedObject.Confidence.ToString("P")})";
+                                    objectsValue += $"{detectedObject.ObjectProperty} - Confidence: {detectedObject.Confidence.ToString("P")}<br />";
 
                                     // Draw object bounding box
                                     var r = detectedObject.Rectangle;
@@ -194,96 +344,33 @@ namespace AiLabb2.Controllers
                             // Get moderation ratings
                             string moderationKey = "Moderation";
                             string moderationValue = "";
-                            moderationValue += $"Ratings: Adult: {analysis.Adult.IsAdultContent} Racy: {analysis.Adult.IsRacyContent} Gore: {analysis.Adult.IsGoryContent}";
+                            moderationValue += $"Ratings: Adult: {analysis.Adult.IsAdultContent} <br /> Racy: {analysis.Adult.IsRacyContent} <br /> Gore: {analysis.Adult.IsGoryContent}";
                             imageDictionary.Add(moderationKey, moderationValue);
                         }
                         imageFound = true;
                     }
-                    // if no matches the image-url, let user know
-                    catch (Exception ex)
-                    {
-                        ViewBag.Url = "No match";
-                        await DisplayImages();
-                    }
+                }
+                catch (Exception ex)
+                {
+                    ViewBag.Url = "No match";
+                    await DisplayImages();
                 }
             }
-
             if (imageFound)
             {
-                ViewBag.SingleImage = sendUrlLinkToProcessUrlView;
+                ViewBag.SingleImageOnline = url;
 
                 return View(imageDictionary);
             }
             else
             {
-                return View("index");
-            }
-        }
-
-
-        // if the image is from an online-image
-        private async Task ProcessOnlineUrl(string url)
-        {
-            // Authenticate Computer Vision client
-            ApiKeyServiceClientCredentials credentials = new ApiKeyServiceClientCredentials(azureKey);
-            cvClient = new ComputerVisionClient(credentials)
-            {
-                Endpoint = azureEndpoint
-            };
-
-            // Specify features to be retrieved
-            List<VisualFeatureTypes?> features = new List<VisualFeatureTypes?>()
-            {
-                VisualFeatureTypes.Description,
-                VisualFeatureTypes.Tags,
-                VisualFeatureTypes.Categories,
-                VisualFeatureTypes.Brands,
-                VisualFeatureTypes.Objects,
-                VisualFeatureTypes.Adult
-            };
-
-            // Get image analysis           
-            try
-            {
-                using (var httpClient = new HttpClient())
-                {
-                    var imageBytes = await httpClient.GetByteArrayAsync(url);
-                    using (var imageData = new MemoryStream(imageBytes))
-                    {
-                        var analysis = await cvClient.AnalyzeImageInStreamAsync(imageData, features);
-
-                        foreach (var caption in analysis.Description.Captions)
-                        {
-                            //descriptions.Add($"Description: {caption.Text} (confidence: {caption.Confidence.ToString("P")})");
-                        }
-                    }
-                }
-
-                // Get image tags
-                // ...
-
-                // Get image categories
-                // ...
-
-                // Get brands in the image
-                // ...
-
-                // Get objects in the image
-                // ...
-
-                // Get moderation ratings
-                // ...
-            }
-            catch (Exception ex)
-            {
-                ViewBag.Url = "No match in the online part";
-                await DisplayImages();
+                return View("Index");
             }
         }
 
 
         [HttpPost]
-        public async Task<IActionResult> GetThumbnail(string url)
+        public async Task<IActionResult> CreateThumbnail(string url, int widht, int height)
         {
             ApiKeyServiceClientCredentials credentials = new ApiKeyServiceClientCredentials(azureKey);
             cvClient = new ComputerVisionClient(credentials)
@@ -294,32 +381,30 @@ namespace AiLabb2.Controllers
             // Generate a thumbnail
             try
             {
-                ViewBag.CreatedThumbnail2 = "inne i try";
-
-                ViewBag.Url3 = url;
-
                 using (var imageData = System.IO.File.OpenRead(url))
                 {
                     ViewBag.CreatedThumbnail3 = "inne i using";
+
                     // Get thumbnail data
                     if (imageData != null)
                     {
-                        var thumbnailStream = await cvClient.GenerateThumbnailInStreamAsync(200, 200, imageData, true);
+                        var thumbnailStream = await cvClient.GenerateThumbnailInStreamAsync(widht, height, imageData, true);
+
                         // Save thumbnail image
                         string thumbnailFileName = $"wwwroot/Thumbnails/thumbnail";
                         using (Stream thumbnailFile = System.IO.File.Create(thumbnailFileName))
                         {
                             thumbnailStream.CopyTo(thumbnailFile);
                         }
-                        ViewBag.CreatedThumbnail = $"Thumbnail saved in {thumbnailFileName}";
+                        ViewBag.CreatedThumbnail = $"Success! Thumbnail saved in Map: {thumbnailFileName}";
                     }
                     else
                     {
-                        ViewBag.CreatedThumbnail4 = "imageData är null";
+                        ViewBag.CreatedThumbnail4 = "Could not create a Thumbnail..";
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 ViewBag.CreatedThumbnail = "No image found";
             }
