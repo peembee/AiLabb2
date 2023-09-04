@@ -35,7 +35,6 @@ namespace AiLabb2.Controllers
 
         }
 
-
         public async Task<IActionResult> Index()
         {
             await DisplayImages();
@@ -309,43 +308,43 @@ namespace AiLabb2.Controllers
                             imageDictionary.Add(brandsKey, brandsValue);
 
 
-                            // Get objects in the image
-                            string objectsKey = "Objects";
-                            string objectsValue = "";
-                            if (analysis.Objects.Count > 0)
-                            {
+                            //// Get objects in the image
+                            //string objectsKey = "Objects";
+                            //string objectsValue = "";
+                            //if (analysis.Objects.Count > 0)
+                            //{
 
-                                // Prepare image for drawing
-                                Image image = Image.FromFile(url);
-                                Graphics graphics = Graphics.FromImage(image);
-                                Pen pen = new Pen(Color.Cyan, 3);
-                                Font font = new Font("Arial", 16);
-                                SolidBrush brush = new SolidBrush(Color.Black);
+                            //    // Prepare image for drawing
+                            //    Image image = Image.FromFile(url);
+                            //    Graphics graphics = Graphics.FromImage(image);
+                            //    Pen pen = new Pen(Color.Cyan, 3);
+                            //    Font font = new Font("Arial", 16);
+                            //    SolidBrush brush = new SolidBrush(Color.Black);
 
-                                foreach (var detectedObject in analysis.Objects)
-                                {
-                                    // Print object name
-                                    objectsValue += $"{detectedObject.ObjectProperty} - Confidence: {detectedObject.Confidence.ToString("P")}<br />";
+                            //    foreach (var detectedObject in analysis.Objects)
+                            //    {
+                            //        // Print object name
+                            //        objectsValue += $"{detectedObject.ObjectProperty} - Confidence: {detectedObject.Confidence.ToString("P")}<br />";
 
-                                    // Draw object bounding box
-                                    var r = detectedObject.Rectangle;
-                                    Rectangle rect = new Rectangle(r.X, r.Y, r.W, r.H);
-                                    graphics.DrawRectangle(pen, rect);
-                                    graphics.DrawString(detectedObject.ObjectProperty, font, brush, r.X, r.Y);
-                                }
-                            }
-                            else
-                            {
-                                objectsValue += "Found no objects..";
-                            }
-                            imageDictionary.Add(objectsKey, objectsValue);
+                            //        // Draw object bounding box
+                            //        var r = detectedObject.Rectangle;
+                            //        Rectangle rect = new Rectangle(r.X, r.Y, r.W, r.H);
+                            //        graphics.DrawRectangle(pen, rect);
+                            //        graphics.DrawString(detectedObject.ObjectProperty, font, brush, r.X, r.Y);
+                            //    }
+                            //}
+                            //else
+                            //{
+                            //    objectsValue += "Found no objects..";
+                            //}
+                            //imageDictionary.Add(objectsKey, objectsValue);
 
 
-                            // Get moderation ratings
-                            string moderationKey = "Moderation";
-                            string moderationValue = "";
-                            moderationValue += $"Ratings: Adult: {analysis.Adult.IsAdultContent} <br /> Racy: {analysis.Adult.IsRacyContent} <br /> Gore: {analysis.Adult.IsGoryContent}";
-                            imageDictionary.Add(moderationKey, moderationValue);
+                            //// Get moderation ratings
+                            //string moderationKey = "Moderation";
+                            //string moderationValue = "";
+                            //moderationValue += $"Ratings: Adult: {analysis.Adult.IsAdultContent} <br /> Racy: {analysis.Adult.IsRacyContent} <br /> Gore: {analysis.Adult.IsGoryContent}";
+                            //imageDictionary.Add(moderationKey, moderationValue);
                         }
                         imageFound = true;
                     }

@@ -3,27 +3,6 @@
     ViewData["Title"] = "ProcessOnlineUrl";
 }
 
-<h1>ProcessOnlineUrl</h1>
-
-
-
-<img src="ViewBag.SingleImageOnline" class="viewSingleImage" />
-
-
-<form asp-action="CreateThumbnail" class=" placeThumbnailBtn">
-    <input type="hidden" name="url" value="@ViewBag.SingleImage" />
-
-    <label class="placeThumbnailLabel">Height Min 200, Max 400</label>
-    <input class="placeThumbnailInput" type="number" min="200" max="400" name="height" value="200" />
-    <br />
-
-    <label class="placeThumbnailLabel">Widht Min 200, Max 400</label>
-    <input class="placeThumbnailInput" type="number" min="200" max="400" name="widht" value="200" />
-    <br />
-    <button type="submit" class="btn btn-primary">Get Thumbnail</button>
-</form>
-
-
 <ul class="cvContainer">
     @if (Model != null)
     {
